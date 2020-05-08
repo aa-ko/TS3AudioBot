@@ -43,7 +43,7 @@ namespace TS3AudioBot.Environment
 		private DbMetaData meta;
 		private StatsData overallStats;
 		private StatsMeta statsPoints;
-		private LiteCollection<StatsData> trackEntries;
+		private ILiteCollection<StatsData> trackEntries;
 		private readonly StatsData CurrentStatsData = new StatsData()
 		{
 			SongStats = new ConcurrentDictionary<string, StatsFactory>()

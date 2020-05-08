@@ -19,7 +19,7 @@ namespace TS3AudioBot
 		private const string DbMetaInformationTable = "dbmeta";
 
 		private readonly LiteDatabase database;
-		private readonly LiteCollection<DbMetaData> metaTable;
+		private readonly ILiteCollection<DbMetaData> metaTable;
 
 		public DbStore(ConfDb config)
 		{
@@ -45,16 +45,18 @@ namespace TS3AudioBot
 			metaTable.Upsert(metaData);
 		}
 
-		public LiteCollection<T> GetCollection<T>(string name)
+		public ILiteCollection<T> GetCollection<T>(string name)
 		{
 			return database.GetCollection<T>(name);
 		}
 
 		public void DropCollection(string name) => database.DropCollection(name);
 
+		// TODO: Remove this
 		public void CleanFile()
 		{
-			database.Shrink();
+			// This is no longer implemented
+			//database.Shrink();
 		}
 
 		public void Dispose()
