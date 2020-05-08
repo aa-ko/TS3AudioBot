@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/core/sdk:3.1.201-alpine3.11
+FROM mcr.microsoft.com/dotnet/core/sdk:2.2.402-alpine3.10
 
 # install all pre-requisites, these will be needed always
 RUN apk update && apk add \
@@ -9,7 +9,10 @@ RUN apk update && apk add \
       zip \
       bash
 
-# download and install the TS3AudioBot in the specified version and flavour
+# install youtube-dl
+RUN apk update && apk add python3 youtube-dl
+
+# COPY source
 RUN mkdir -p /opt/TS3AudioBot/build \
     && cd /opt/TS3AudioBot/build
 
@@ -22,13 +25,12 @@ COPY TSLib/ /opt/TS3AudioBot/build/TSLib/
 
 ARG TS3_AUDIOBOT_BUILD_CONFIG="Debug"
 
+# build TS3AudioBot
 WORKDIR /opt/TS3AudioBot/build/
-RUN dotnet build --framework netcoreapp3.1 --configuration "$TS3_AUDIOBOT_BUILD_CONFIG" TS3AudioBot
+RUN dotnet build --framework netcoreapp2.2 --configuration "$TS3_AUDIOBOT_BUILD_CONFIG" TS3AudioBot
 
-RUN mv /opt/TS3AudioBot/build/TS3AudioBot/bin/"$TS3_AUDIOBOT_BUILD_CONFIG"/netcoreapp3.1/* /opt/TS3AudioBot/
-
-# install and setup youtube-dl if configured
-RUN apk update && apk add python3 youtube-dl
+# move binaries
+RUN mv /opt/TS3AudioBot/build/TS3AudioBot/bin/"$TS3_AUDIOBOT_BUILD_CONFIG"/netcoreapp2.2/* /opt/TS3AudioBot/
 
 # add user to run under
 RUN adduser --shell /bin/bash --uid 9999 --disabled-password ts3bot
