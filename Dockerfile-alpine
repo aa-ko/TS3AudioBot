@@ -27,10 +27,7 @@ ARG TS3_AUDIOBOT_BUILD_CONFIG="Debug"
 
 # build TS3AudioBot
 WORKDIR /opt/TS3AudioBot/build/
-RUN dotnet build --framework netcoreapp2.2 --configuration "$TS3_AUDIOBOT_BUILD_CONFIG" TS3AudioBot
-
-# move binaries
-RUN mv /opt/TS3AudioBot/build/TS3AudioBot/bin/"$TS3_AUDIOBOT_BUILD_CONFIG"/netcoreapp2.2/* /opt/TS3AudioBot/
+RUN dotnet publish --framework netcoreapp2.2 --configuration "$TS3_AUDIOBOT_BUILD_CONFIG" -r linux-x64 --self-contained true -o /opt/TS3AudioBot/ TS3AudioBot
 
 # add user to run under
 RUN adduser --shell /bin/bash --uid 9999 --disabled-password ts3bot

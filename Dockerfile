@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/core/sdk:3.1.201-bionic
+FROM mcr.microsoft.com/dotnet/core/sdk:2.2.402-bionic
 
 # install all pre-requisites, these will be needed always
 RUN apt-get update && apt-get install -y \
@@ -7,6 +7,9 @@ RUN apt-get update && apt-get install -y \
       opus-tools \
       ffmpeg \
       zip
+
+# install youtube-dl
+RUN apt-get update && apt-get install -y python3 youtube-dl
 
 # download and install the TS3AudioBot in the specified version and flavour
 RUN mkdir -p /opt/TS3AudioBot/build \
@@ -21,22 +24,10 @@ COPY TSLib/ /opt/TS3AudioBot/build/TSLib/
 
 ARG TS3_AUDIOBOT_BUILD_CONFIG="Debug"
 
+# build TS3AudioBot and cleanup
 WORKDIR /opt/TS3AudioBot/build/
-RUN dotnet build --framework netcoreapp3.1 --configuration "$TS3_AUDIOBOT_BUILD_CONFIG" TS3AudioBot
-
-RUN mv /opt/TS3AudioBot/build/TS3AudioBot/bin/"$TS3_AUDIOBOT_BUILD_CONFIG"/netcoreapp3.1/* /opt/TS3AudioBot/
-
-# define this here so we can reuse the above layers
-ARG TS3_AUDIOBOT_INCLUDE_YOUTUBE_DL="true"
-
-# install and setup youtube-dl if configured
-RUN bash -c 'if [ "xy$TS3_AUDIOBOT_INCLUDE_YOUTUBE_DL" == "xytrue" ] ; then \
-        apt-get update && apt-get install -y python3 \
-        && update-alternatives --install /usr/bin/python python /usr/bin/python3 99 \
-        && curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl && chmod a+rx /usr/local/bin/youtube-dl ; \
-    else \
-        echo "skipping setup for youtube-dl"; \
-    fi'
+RUN dotnet publish --framework netcoreapp2.2 --configuration "$TS3_AUDIOBOT_BUILD_CONFIG" -r linux-x64 --self-contained true -o /opt/TS3AudioBot/ TS3AudioBot
+RUN rm -r /opt/TS3AudioBot/build
 
 # add user to run under
 RUN useradd -ms /bin/bash -u 9999 ts3bot
