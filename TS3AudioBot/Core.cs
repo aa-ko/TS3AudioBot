@@ -24,145 +24,159 @@ using TS3AudioBot.Web;
 
 namespace TS3AudioBot
 {
-	public sealed class Core : IDisposable
-	{
-		private static readonly Logger Log = LogManager.GetCurrentClassLogger();
-		private readonly string configFilePath;
-		private bool forceNextExit;
-		private readonly CoreInjector injector;
+    public sealed class Core : IDisposable
+    {
+        private static readonly Logger Log = LogManager.GetCurrentClassLogger();
+        private readonly string configFilePath;
+        private bool forceNextExit;
+        private readonly CoreInjector injector;
 
-		internal static void Main(string[] args)
-		{
-			Thread.CurrentThread.Name = "TAB Main";
+        internal static void Main(string[] args)
+        {
+            Thread.CurrentThread.Name = "TAB Main";
 
-			var setup = Setup.ReadParameter(args);
+            var setup = Setup.ReadParameter(args);
 
-			if (setup.Exit == ExitType.Immediately)
-				return;
+            if (setup.Exit == ExitType.Immediately)
+                return;
 
-			if (!setup.SkipVerifications && !Setup.VerifyAll())
-				return;
+            if (!setup.SkipVerifications && !Setup.VerifyAll())
+                return;
 
-			if (setup.Llgc)
-				Setup.EnableLlgc();
+            if (setup.Llgc)
+                Setup.EnableLlgc();
 
-			if (!setup.HideBanner)
-				Setup.LogHeader();
+            if (!setup.HideBanner)
+                Setup.LogHeader();
 
-			// Initialize the actual core
-			var core = new Core(setup.ConfigFile);
-			AppDomain.CurrentDomain.UnhandledException += core.ExceptionHandler;
-			TaskScheduler.UnobservedTaskException += UnobservedTaskExceptionHandler;
-			Console.CancelKeyPress += core.ConsoleInterruptHandler;
+            // Initialize the actual core
+            var core = new Core(setup.ConfigFile);
+            AppDomain.CurrentDomain.UnhandledException += core.ExceptionHandler;
+            TaskScheduler.UnobservedTaskException += UnobservedTaskExceptionHandler;
+            Console.CancelKeyPress += core.ConsoleInterruptHandler;
 
-			var initResult = core.Run(setup);
-			if (!initResult)
-			{
-				Log.Error("Core initialization failed: {0}", initResult.Error);
-				core.Dispose();
-			}
-		}
+            var initResult = core.Run(setup);
+            if (!initResult)
+            {
+                Log.Error("Core initialization failed: {0}", initResult.Error);
+                core.Dispose();
+            }
+        }
 
-		public Core(string configFilePath = null)
-		{
-			// setting defaults
-			this.configFilePath = configFilePath ?? FilesConst.CoreConfig;
+        public Core(string configFilePath = null)
+        {
+            // setting defaults
+            this.configFilePath = configFilePath ?? FilesConst.CoreConfig;
 
-			injector = new CoreInjector();
-		}
+            injector = new CoreInjector();
+        }
 
-		private E<string> Run(ParameterData setup)
-		{
-			var configResult = ConfRoot.OpenOrCreate(configFilePath);
-			if (!configResult.Ok)
-				return "Could not create config";
-			ConfRoot config = configResult.Value;
-			Config.Deprecated.UpgradeScript.CheckAndUpgrade(config);
-			ConfigUpgrade2.Upgrade(config.Configs.BotsPath.Value);
-			config.Save();
+        private E<string> Run(ParameterData setup)
+        {
+#if DEBUG
+            try
+            {
+#endif
+                var configResult = ConfRoot.OpenOrCreate(configFilePath);
+                if (!configResult.Ok)
+                    return "Could not create config";
+                ConfRoot config = configResult.Value;
+                Config.Deprecated.UpgradeScript.CheckAndUpgrade(config);
+                ConfigUpgrade2.Upgrade(config.Configs.BotsPath.Value);
+                config.Save();
 
-			var builder = new DependencyBuilder(injector);
+                var builder = new DependencyBuilder(injector);
 
-			builder.AddModule(this);
-			builder.AddModule(config);
-			builder.AddModule(injector);
-			builder.AddModule(config.Db);
-			builder.RequestModule<SystemMonitor>();
-			builder.RequestModule<DbStore>();
-			builder.AddModule(config.Plugins);
-			builder.RequestModule<PluginManager>();
-			builder.AddModule(config.Web);
-			builder.AddModule(config.Web.Interface);
-			builder.AddModule(config.Web.Api);
-			builder.RequestModule<WebServer>();
-			builder.AddModule(config.Rights);
-			builder.RequestModule<RightsManager>();
-			builder.RequestModule<BotManager>();
-			builder.RequestModule<TokenManager>();
-			builder.RequestModule<CommandManager>();
-			builder.AddModule(config.Factories);
-			builder.RequestModule<ResourceResolver>();
-			builder.RequestModule<Stats>();
+                builder.AddModule(this);
+                builder.AddModule(config);
+                builder.AddModule(injector);
+                builder.AddModule(config.Db);
+                builder.RequestModule<SystemMonitor>();
+                builder.RequestModule<DbStore>();
+                builder.AddModule(config.Plugins);
+                builder.RequestModule<PluginManager>();
+                builder.AddModule(config.Web);
+                builder.AddModule(config.Web.Interface);
+                builder.AddModule(config.Web.Api);
+                builder.RequestModule<WebServer>();
+                builder.AddModule(config.Rights);
+                builder.RequestModule<RightsManager>();
+                builder.RequestModule<BotManager>();
+                builder.RequestModule<TokenManager>();
+                builder.RequestModule<CommandManager>();
+                builder.AddModule(config.Factories);
+                builder.RequestModule<ResourceResolver>();
+                builder.RequestModule<Stats>();
 
-			if (!builder.Build())
-			{
-				Log.Error("Missing core module dependency");
-				return "Could not load all core modules";
-			}
+                if (!builder.Build())
+                {
+                    Log.Error("Missing core module dependency");
+                    return "Could not load all core modules";
+                }
 
-			YoutubeDlHelper.DataObj = config.Tools.YoutubeDl;
+                YoutubeDlHelper.DataObj = config.Tools.YoutubeDl;
 
-			builder.GetModule<SystemMonitor>().StartTimedSnapshots();
-			builder.GetModule<CommandManager>().RegisterCollection(MainCommands.Bag);
-			builder.GetModule<RightsManager>().CreateConfigIfNotExists(setup.Interactive);
-			builder.GetModule<BotManager>().RunBots(setup.Interactive);
-			builder.GetModule<WebServer>().StartWebServer();
-			builder.GetModule<Stats>().StartTimer(setup.SendStats);
+                builder.GetModule<SystemMonitor>().StartTimedSnapshots();
+                builder.GetModule<CommandManager>().RegisterCollection(MainCommands.Bag);
+                builder.GetModule<RightsManager>().CreateConfigIfNotExists(setup.Interactive);
+                builder.GetModule<BotManager>().RunBots(setup.Interactive);
+                builder.GetModule<WebServer>().StartWebServer();
+                builder.GetModule<Stats>().StartTimer(setup.SendStats);
 
-			return R.Ok;
-		}
+                return R.Ok;
+#if DEBUG
+            }
+            catch (Exception e)
+            {
+                Log.Fatal(e);
+                System.Environment.Exit(-1337);
+            }
 
-		public void ExceptionHandler(object sender, UnhandledExceptionEventArgs e)
-		{
-			Log.Fatal(e.ExceptionObject as Exception, "Critical program failure!");
-			Dispose();
-			System.Environment.Exit(-1);
-		}
+			throw new Exception("Wtf?");
+#endif
+        }
 
-		public static void UnobservedTaskExceptionHandler(object sender, UnobservedTaskExceptionEventArgs e)
-		{
-			Log.Fatal(e.Exception, "Critical program error!");
-		}
+        public void ExceptionHandler(object sender, UnhandledExceptionEventArgs e)
+        {
+            Log.Fatal(e.ExceptionObject as Exception, "Critical program failure!");
+            Dispose();
+            System.Environment.Exit(-1);
+        }
 
-		public void ConsoleInterruptHandler(object sender, ConsoleCancelEventArgs e)
-		{
-			if (e.SpecialKey == ConsoleSpecialKey.ControlC)
-			{
-				if (!forceNextExit)
-				{
-					Log.Info("Got interrupt signal, trying to soft-exit.");
-					e.Cancel = true;
-					forceNextExit = true;
-					Dispose();
-				}
-				else
-				{
-					Log.Info("Got multiple interrupt signals, trying to force-exit.");
-					System.Environment.Exit(0);
-				}
-			}
-		}
+        public static void UnobservedTaskExceptionHandler(object sender, UnobservedTaskExceptionEventArgs e)
+        {
+            Log.Fatal(e.Exception, "Critical program error!");
+        }
 
-		public void Dispose()
-		{
-			Log.Info("TS3AudioBot shutting down.");
+        public void ConsoleInterruptHandler(object sender, ConsoleCancelEventArgs e)
+        {
+            if (e.SpecialKey == ConsoleSpecialKey.ControlC)
+            {
+                if (!forceNextExit)
+                {
+                    Log.Info("Got interrupt signal, trying to soft-exit.");
+                    e.Cancel = true;
+                    forceNextExit = true;
+                    Dispose();
+                }
+                else
+                {
+                    Log.Info("Got multiple interrupt signals, trying to force-exit.");
+                    System.Environment.Exit(0);
+                }
+            }
+        }
 
-			injector.GetModule<BotManager>()?.Dispose();
-			injector.GetModule<PluginManager>()?.Dispose();
-			injector.GetModule<WebServer>()?.Dispose();
-			injector.GetModule<DbStore>()?.Dispose();
-			injector.GetModule<ResourceResolver>()?.Dispose();
-			TickPool.Close();
-		}
-	}
+        public void Dispose()
+        {
+            Log.Info("TS3AudioBot shutting down.");
+
+            injector.GetModule<BotManager>()?.Dispose();
+            injector.GetModule<PluginManager>()?.Dispose();
+            injector.GetModule<WebServer>()?.Dispose();
+            injector.GetModule<DbStore>()?.Dispose();
+            injector.GetModule<ResourceResolver>()?.Dispose();
+            TickPool.Close();
+        }
+    }
 }
