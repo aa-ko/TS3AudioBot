@@ -32,18 +32,8 @@ namespace TSLib
 		private static readonly TimeSpan LookupTimeout = TimeSpan.FromSeconds(1);
 		private static readonly Resolver Resolver = new Resolver(new[]
 		{
-			// Google
-			new IPEndPoint(new IPAddress(new byte[] { 8,8,8,8 }), 53),
-			new IPEndPoint(new IPAddress(new byte[] { 8,8,4,4 }), 53),
-			// Cloudflare
-			new IPEndPoint(new IPAddress(new byte[] { 1,1,1,1 }), 53),
-			new IPEndPoint(new IPAddress(new byte[] { 1,0,0,1 }), 53),
-			// OpenDNS
-			new IPEndPoint(new IPAddress(new byte[] { 208,67,222,222 }), 53),
-			new IPEndPoint(new IPAddress(new byte[] { 208,67,220,220 }), 53),
-			// Freenom
-			new IPEndPoint(new IPAddress(new byte[] { 80,80,80,80 }), 53),
-			new IPEndPoint(new IPAddress(new byte[] { 80,80,81,81 }), 53),
+			// TODO: Make this configurable
+			new IPEndPoint(new IPAddress(new byte[] { 10,1,1,1 }), 53)
 		});
 
 		/// <summary>Tries to resolve an address string to an ip.</summary>
