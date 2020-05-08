@@ -6,7 +6,8 @@ RUN apk update && apk add \
       opus-dev \
       opus-tools \
       ffmpeg \
-      zip
+      zip \
+      bash
 
 # download and install the TS3AudioBot in the specified version and flavour
 RUN mkdir -p /opt/TS3AudioBot/build \
@@ -26,20 +27,11 @@ RUN dotnet build --framework netcoreapp3.1 --configuration "$TS3_AUDIOBOT_BUILD_
 
 RUN mv /opt/TS3AudioBot/build/TS3AudioBot/bin/"$TS3_AUDIOBOT_BUILD_CONFIG"/netcoreapp3.1/* /opt/TS3AudioBot/
 
-# define this here so we can reuse the above layers
-ARG TS3_AUDIOBOT_INCLUDE_YOUTUBE_DL="true"
-
 # install and setup youtube-dl if configured
-RUN bash -c 'if [ "xy$TS3_AUDIOBOT_INCLUDE_YOUTUBE_DL" == "xytrue" ] ; then \
-        apt-get update && apt-get install -y python3 \
-        && update-alternatives --install /usr/bin/python python /usr/bin/python3 99 \
-        && curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl && chmod a+rx /usr/local/bin/youtube-dl ; \
-    else \
-        echo "skipping setup for youtube-dl"; \
-    fi'
+RUN apk update && apk add python3 youtube-dl
 
 # add user to run under
-RUN useradd -ms /bin/bash -u 9999 ts3bot
+RUN adduser --shell /bin/bash --uid 9999 --disabled-password ts3bot
 
 # make data directory and chown it to the ts3bot user
 RUN mkdir -p /data
