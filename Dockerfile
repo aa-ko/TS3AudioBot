@@ -1,7 +1,7 @@
-# TODO:
-# - Do we want the WebInterface to reside in /opt/TS3AudioBot/bin/WebInterface? This requires the config to contain the correct path.
-#   Alternatively, we could move the webpack output directly to /data but I have no idea if this is a security concern.
-# - Switch to building in release mode
+# Credit for the original Dockerfile goes to: https://github.com/getdrunkonmovies-com/TS3AudioBot_docker
+# Things to note when using this:
+# - youtube-dl path has to be set to '/usr/local/bin/youtube-dl' in ts3audiobot.toml
+# - web interface path has to be set to '/opt/TS3AudioBot/bin/WebInterface' in ts3audiobot.toml
 
 FROM mcr.microsoft.com/dotnet/core/sdk:2.2.402-bionic
 
@@ -13,8 +13,11 @@ RUN apt-get update && apt-get install -y \
       ffmpeg \
       zip \
       npm \
-      python3 \
-      youtube-dl
+      python3
+
+# Manually download and install youtube-dl
+# The Bionic package repository contains youtube-dl 2018.03.14-1. Downloading from Youtube does not work with this version.
+RUN curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl && chmod a+rx /usr/local/bin/youtube-dl
 
 # download and install the TS3AudioBot in the specified version and flavour
 RUN mkdir -p /opt/TS3AudioBot/build \
